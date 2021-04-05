@@ -1,0 +1,68 @@
+module Hill where
+/*
+ * Simple implementation of the Hill cipher.
+ * https://en.wikipedia.org/wiki/Hill_cipher
+ */
+
+// max value of a is 26 * 26 = 676 => 10 bits are required
+type a = [16] // vector/matrix element
+N = 26
+
+/*
+ * Encrypts the plaintext given the key.
+ *
+ * Input: The plaintext and the key
+ * Output: The ciphertext (as a vector)
+ */
+encrypt : {n, m}
+  (fin n, n >= 1, n == m / n, fin m, m == n * (m / n)) =>
+  [n][8] -> [m][8] -> [n]a
+
+encrypt pt key = Zn_vecMul pt' kM
+  where
+    kM = getKeyMat pt' key'
+    pt' = Bto2B [l - 'A' | l <- pt] // A -> 0, B -> 1, ... Z = 25
+    key' = Bto2B key
+/*
+ * Decryption involves finding the inverse matrix and that's a gigantic pain in a language like Cryptol.
+ * (It's the language of Cryptography, not mathematics, after all)
+ */
+
+/*
+ * Converts an array of byte values in array of two-byte values.
+ * (Useful because all the operations in the cipher operate on two bytes but strings are made up of 8bit characters)
+ *
+ * Input: A list of byte characters
+ * Output: The same list, now represented by two bytes per char
+ */
+Bto2B : {n} (fin n) => [n][8] -> [n]a
+Bto2B xs = [0x00 # x | x <- xs]
+
+private
+  /*
+   * Dot product in Z/nZ.
+   */
+  Zn_dot : {n} (fin n) => [n]a -> [n]a -> a
+  Zn_dot xs ys = (sum [x * y | x <- xs | y <- ys]) % N
+
+  /*
+   * Product of vector and matrix in Z/nZ
+   */
+  Zn_vecMul : {n, m} (fin n, fin m) => [n]a -> [m][n]a -> [m]a
+  Zn_vecMul xs yss = [Zn_dot xs ys | ys <- yss]
+
+  /*
+   * Get the key matrix from the input plaintext and key.
+   *
+   * Input: Plaintext and key as strings
+   * Output: The key matrix to use for encryption
+   */
+  getKeyMat : {n, m, k}
+    (fin n, n >= 1, fin m, m == n * (m / n), k == m / n) =>
+    [n]a -> [m]a -> [k][n]a
+
+  getKeyMat pt key = split adjusted
+    where
+      adjusted = [x - A | x <- key]
+      A = 65 : [16] // 'A' == 65
+

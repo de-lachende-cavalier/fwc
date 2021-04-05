@@ -1,0 +1,28 @@
+module caesar where
+
+alpha_up = ['A' .. 'Z']
+alpha_low = ['a' .. 'z']
+
+eCaesar, dCaesar : {s} (fin s) => [8] -> String s -> String s
+
+eCaesar n pt = [shift x | x <- pt]
+  where
+  cmap = if all upper pt then alpha_up <<< n else alpha_low <<< n /* avoid shadowing 'map' */
+    where
+      upper x = (x >= 'A') && (x <= 'Z')
+  shift c = cmap @ (if elem c alpha_up then c - 'A' else c - 'a')
+
+dCaesar n ct = [shift x | x <- ct]
+  where
+  cmap = if all upper ct then alpha_up >>> n else alpha_low >>> n
+    where
+      upper x = (x >= 'A') && (x <= 'Z')
+  shift c = cmap @ (if elem c alpha_up then c - 'A' else c - 'a')
+
+private
+  /* easy bruteforce to crack caesar cipher */
+  crackIt ct = [dCaesar n ct | n <- [1:[8] .. 25]]
+
+  /* repeated caesar cipher (as weak as one-time caesar cipher) */
+  rivate repeatC pt = [eCaesar n pt | n <- [4, 7, 13, 11] : [4][8]] ! 0
+

@@ -1,0 +1,106 @@
+module Porta where
+/*
+ * Implements Porta's cipher, aka digram encryption where we associate a number to each digram.
+ * The key is some given permutation of the numbers.
+ */
+
+import Hill(Bto2B)
+
+type DWORD = [16]
+type Key = [26][26]DWORD
+
+/*
+ * Splits the plaintex/ciphertext in digrams.
+ *
+ * Input: The plaintext/ciphertext
+ * Output: The plaintext/ciphertext split into digrams, with each element being made fo 16 bits
+ */
+splitDigrams : {n, m} (fin n, fin m, n == 2 * m) => String n -> [m][2]DWORD
+splitDigrams s = split s2w
+  where
+    s2w = Bto2B s
+
+/*
+ * Makes a key object from a seed.
+ * (As of now this is not random in the slightest)
+ *
+ * Input: A seed s
+ * Output: A random key layout
+ */
+mkKey s = split [x | x <- [0 .. 675]] : Key
+
+/*
+ * Performs the Porta encryption.
+ *
+ * Input: The plaintext
+ * Output: The ciphertext
+ */
+encrypt : {n, m} (fin n, fin m, n == 2 * m) => String n -> [m]DWORD
+encrypt pt = ct
+  where
+    ct = [(key @ (iFromS p 0)) @ (iFromS p 1) | p <- pt']
+    pt' = splitDigrams pt
+    key = mkKey 1
+
+/*
+ * Performs the Porta decryption.
+ *
+ * Input: The ciphertext
+ * Output: The plaintext
+ */
+decrypt : {n, m} (fin n, fin m, n == 2 * m) => [m]DWORD -> [n]DWORD
+decrypt ct = pt
+  where
+    pt = join [searchInKey x | x <- ct]
+
+private
+  /*
+   * Serves to get an index (to index into the key matrix) out of the digrams.
+   *
+   * Input: The string (of plaintex/ciphertex) and the index into the digram
+   * Output: The index into the key matrix
+   */
+  iFromS : {n} (fin n) => [n]DWORD -> DWORD -> DWORD
+  iFromS s idx = (s @ idx) - 0x0041
+
+  /*
+   * Gets the index corresponding to an element in a vector.
+   * (In our case we adapted the general search to our needs).
+   *
+   * Input: The vector we want to search and the value
+   * Output: The index of the value in the vector
+   */
+  getColIdx, getRowIdx : {n} (fin n) => [n]DWORD -> DWORD -> DWORD
+
+  getColIdx xs n = foldl (+) 0 ys
+    where
+      ys = take`{676} ys'
+      ys' = [if (xs @ i == n) then i else 0 | i <- [0 ...]]
+
+  getRowIdx xs n = foldl (+) 0 ys
+    where
+      ys = take`{26} ys'
+      ys' = [if (xs @ i == n) then i else 0 | i <- [0 ...]]
+
+  /*
+   * Returns the digram corresponding to the given value in the ciphertext.
+   *
+   * Input: The ciphertext value (a number)
+   * Output: The digram corresponding to the digram in the key matrix
+   */
+  searchInKey : DWORD -> [2]DWORD
+  searchInKey n = [second, first]
+    where
+      first = 0x0041 + fIdx
+      fIdx = (getRowIdx (key @ sIdx) n)
+
+      second = 0x0041 + sIdx
+      sIdx = (getColIdx (join key) n) / 26
+
+      key = mkKey 1
+
+/*
+ * TODO => have to restrict input to only uppercase letters!!
+ */
+numsInRange : {n, m} (fin n, n == 2 * m, fin m, n >= 2, m >= 2) => String n -> Bit
+numsInRange s = all isTrue [if (x >= 0) && (x <= 676) then True else False | x <- (encrypt s)] where isTrue x = x

@@ -1,0 +1,59 @@
+module assurance where
+
+// we want to tell Cryptol that x**2 - y**2 = (x - y) * (x + y), and we want Cryptol to verify this property and make
+// sure it holds
+sqDif (x, y) = x^^2 - y^^2
+sqDif' (x, y) = (x - y) * (x + y)
+
+// the fact that properties have the same syntax as functions is not coincidental => they're the same thing
+// with the only caveat that properties always return a Bit
+
+sqDifCorrect : ([8], [8]) -> Bit
+// note the 'property' keyword
+property sqDifCorrect (x, y) = sqDif (x, y) == sqDif' (x, y)
+// OR
+// property sqDifCorrect = sqDif === sqDif'
+
+// reverse of reverse is the same list
+revRev : {n, a} (fin n, Eq a) => [n]a -> Bit
+property revRev xs = xs == reverse (reverse xs)
+
+// append is associative
+appAssoc : {n, m, k, a} (fin n, fin m, fin k, Eq a) => [n]a -> [m]a -> [k]a -> Bit
+property appAssoc xs ys zs = xs # (ys # zs) == (xs # ys) # zs
+
+// left shift of k is the same as multiplying by 2^^k
+property lshMul (n, k) = n << k == n * (2^^k)
+
+// the property above is polymorphic
+// !! --> polymorphic validity is generally not a guarantee in Cryptol => so if you want accurate results be specific (aka monomorphic)
+
+// example of property using testvectors
+property incTest = [ f x == y | (x, y) <- testVec ] == ~zero
+  where
+    f x = x + 1
+    testVec = [(3, 4), (4, 5), (-3, -2), (145, 146)]
+
+// to prove these properties you do :prove <propertyName> in the REPL
+// :prove will raise 'Not a monomorphic type' if you try polymorphic properties !! (look above)
+// BUT, we can give type annotations directly to :prove to make the function monomorphic
+
+// a ===> b  :: if a then b else True
+// a \/ b    :: if a then True else b
+// a /\ b    :: if a then b else False
+property mulDivMod x y = (y != 0) ==> x == (x / y) * y + (x % y) // don't deal with y == 0 (it would be a division by 0 error otherwise, so we ignore it by returning True)
+
+// if you want faster checks for properties use :check
+// if you want more exhaustive (so slower) tests use :exhaustive (n of tests is limited by :set tests
+
+// :check or :prove without an explicit property will check every property in the program (apart from the polymorphic ones)
+
+// :sat => satisfiability (intelligently search for a solution) -> 4.4 Cryptol book
+type Quad a = ([a], [a], [a], [a])
+
+// fermat's last theorem, aka a^^n + b^^n = c^^n has no integer solutions for a,b,c > 0 and n > 2
+modFermat : {s} (fin s , s >= 2) => Quad s -> Bit
+modFermat (a, b, c, n) = a^^n + b^^n == c^^n
+// XXX surprisingly, fermat's last theorem is false in the modular bit arithemtic of Cryptol (!!) (check :sat)
+
+

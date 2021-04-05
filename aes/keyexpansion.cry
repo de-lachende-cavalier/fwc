@@ -1,0 +1,121 @@
+module keyexpansion where
+/*
+ * Module for Key expansion => AES does not use the provived as is, instead it derives round keys (key schedule) and uses those.
+ */
+
+import subbytes(subByte)
+import polynomials
+import params
+
+/*
+ * Constant array used during expansion, as defined in the spec.
+ * Written as a function for convenience.
+ * (We don't actually use this version but the lookup on, cause it's faster).
+ */
+Rcon' : GF28 -> [4]GF28
+Rcon' i = [(GF28_Pow <| x |> i - 1), 0, 0, 0]
+
+/*
+ * by def. AES calls recon with params <- [1 .. 10]
+ * => we can create a lookup table to speed up calculations
+ */
+Rtab : [10][4]GF28
+Rtab = [[0x01, 0x00, 0x00, 0x00], [0x03, 0x00, 0x00, 0x00],
+        [0x07, 0x00, 0x00, 0x00], [0x0f, 0x00, 0x00, 0x00],
+        [0x1f, 0x00, 0x00, 0x00], [0x3f, 0x00, 0x00, 0x00],
+        [0x7f, 0x00, 0x00, 0x00], [0x1a, 0x00, 0x00, 0x00],
+        [0x35, 0x00, 0x00, 0x00], [0x6b, 0x00, 0x00, 0x00]]
+
+/*
+ * Modified version of Rcon involving a simple lookup in Rtab.
+ */
+Rcon : GF28 -> [4]GF28
+Rcon i = Rtab @ (i - 1)
+
+/*
+ * Applies subByte to a 32 bit word.
+ *
+ * Input: The 32 bit word of interest
+ * Output: The 32 bit word resulting from subBytes
+ */
+subWord : [4]GF28 -> [4]GF28
+subWord bs = [subByte b | b <- bs]
+
+/*
+ * Rotates a word to the left.
+ * (Although we could have used a left rotation, we kept the function as written in the spec for clarity).
+ *
+ * Input: The 32 bit word of interest
+ * Output: The 32 bit resulting from the left rotation
+ */
+rotWord : [4]GF28 -> [4]GF28
+rotWord [a0, a1, a2, a3] = [a1, a2, a3, a0] // same as rotWord v = v <<< 1
+
+/*
+ * Determines ith element of the expanded key.
+ *
+ * Input: The index of the element to be determined and two 32 bit words
+ * Output: The ith 32 bit word of the expanded key
+ */
+nextWord : GF28 -> [4]GF28 -> [4]GF28 -> [4]GF28
+nextWord i prev old = old ^ mask
+  where
+    mask = if i % `Nk == 0 then subWord (rotWord(prev)) ^ Rcon (i / `Nk)
+           else if (`Nk > 6) && (i % `Nk == 4) then subWord(prev)
+           else prev
+
+/*
+ * Expands the key indefinitely.
+ *
+ * Input: The initial key
+ * Output: An infinite regression obtained by the same rules as the AES Expanded Key
+ */
+expandKeyInf : [Nk][4]GF28 -> [inf]RoundKey
+expandKeyInf seed = [transpose g | g <- groupBy`{4} (keyWS seed)]
+
+keyWS : [Nk][4][8] -> [inf][4][8]
+keyWS seed = xs
+  where
+    xs = seed # [nextWord i prev old
+                | i    <- [`Nk ...]
+                | prev <- drop`{Nk - 1} xs
+                | old  <- xs
+                ]
+/*
+ * Using the infinite expansion above, extrat the needed amount for the Key Schedule.
+ *
+ * Input: The AES key size
+ * Output: The resulting Key Schedule
+ */
+expandKey : [AESKeySize] -> KeySchedule
+expandKey key = (keys @ 0, keys @@ [1 .. (Nr - 1)], keys @ `Nr)
+  where
+    seed : [Nk][4][8]
+    seed = split (split key)
+    keys = expandKeyInf seed
+
+/*
+ * Final transformation of the key expansion step.
+ * Simply XORs the round key with the current state, element by element.
+ *
+ * Input: The Round Key and the current/old state
+ * Output: The new state
+ */
+addRoundKey : RoundKey -> State -> State
+addRoundKey rk s = rk ^ s
+
+/*
+ * Useful for checking whether our implementation by providing the test vectors provided in the spec.
+ *
+ * Input: The Key Schedule
+ * Output: Correctly aligned view of the Key Schedule
+ */
+fromKS : KeySchedule -> [Nr + 1][4][32]
+fromKS (f, ms, l) = [formKeyWords (transpose k) | k <- [f] # ms # [l]]
+  where
+    formKeyWords bbs = [join bs | bs <- bbs]
+
+/* checked using :exhaust (256 tests) */
+lookRconEq : GF28 -> Bit
+property lookRconEq i = if (i >= 1) && (i <= 10) then Rcon i == Rcon' i else True // ignore i > 10
+

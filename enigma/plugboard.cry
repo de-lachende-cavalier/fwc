@@ -1,0 +1,11 @@
+module plugboard where
+/*
+ * The plugboard is simply a static permutation of the alphabet.
+ */
+
+type Permutation = String 26
+type Plugboard = Permutation
+
+/* plugboard : Plugboard */
+/* plugboard = "HBGDEFCAIJKOWNLPXRSVYTMQUZ" */
+

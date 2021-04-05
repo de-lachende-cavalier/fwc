@@ -1,0 +1,23 @@
+module params where
+/*
+ * This module is mostly concerned with defining the various parameters in play in AES.
+ * Standard: https://csrc.nist.gov/csrc/media/publications/fips/197/final/documents/fips-197.pdf
+ */
+
+/* Number of 32B words */
+type AES128 = 4 // 4 * 32 = 128
+type AES192 = 6
+type AES256 = 8
+
+type Nk = AES128
+type Nb = 4 // for AES_128 (6 for AES_192 and 8 for AES_256)
+type Nr = 6 + Nk
+
+type AESKeySize = (Nk * 32)
+
+/* For polynomials in the Galois Field 2^^8 */
+type GF28 = [8]
+type State = [4][Nb]GF28 // State is 4x4 matrix of bytes
+
+type RoundKey = State
+type KeySchedule = (RoundKey, [Nr - 1]RoundKey, RoundKey)

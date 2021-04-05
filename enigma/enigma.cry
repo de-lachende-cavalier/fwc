@@ -1,0 +1,57 @@
+module Enigma where
+
+import plugboard
+import rotors
+import reflector
+
+import utils
+
+type Enigma n = { plugboard : Plugboard,
+                  rotors : [n]Rotor,
+                  reflector : Reflector }
+
+/*
+ * Creates an Enigma machine given the components.
+ *
+ * Input: A Plugboard, Rotors, a Reflector and the String to pass through the Enigma
+ * Output: A new Enigma, initialized according to all the inputs
+ */
+mkEnigma : {n} (Plugboard, [n]Rotor, Reflector, [n]Char) -> Enigma n
+mkEnigma (pboard, rs, refl, startPos) = { plugboard = pboard,
+                                          rotors = [ r <<< (s - 'A')
+                                                   | r <- rs
+                                                   | s <- startPos
+                                                   ],
+                                          reflector = refl }
+
+
+/*
+ * Takes a single Char through the Enigma loop (c0 ... c5)
+ *
+ * Input: An Enigma in a state s and a Char
+ * Output: The state s' of the rotors after the loop and the resulting Char
+ */
+enigmaLoop : {n} (fin n) => (Plugboard, [n]Rotor, Reflector, Char) -> ([n]Rotor, Char)
+enigmaLoop (plugboard, rotors, reflector, c0) = (rotors', c5)
+  where
+    c1 = substFwd (plugboard, c0)
+    (rotors', c2) = joinRotors (rotors, c1)
+    c3 = substFwd (reflector, c2)
+    c4 = backSignal (rotors, c3)
+    c5 = substBwd (plugboard, c4)
+
+/*
+ * Encrypts/decrypts a String.
+ * Enigma is self-decrypting, so encryption and decryption are precisely the same.
+ *
+ * Input: An Enigma machine in a state s and the String of length m to encrypt/decrypt
+ * Output: The encrypted/decrypted string
+ */
+encrypt, decrypt : {n, m} (fin n, fin m) => (Enigma n, String m) -> String m
+encrypt (enigma, pt) = tail [c | (_, c) <- rcs]
+  where
+    rcs = [(enigma.rotors, '*')] # [enigmaLoop (enigma.plugboard, r, enigma.reflector, c)
+                                   | c <- pt
+                                   | (r, _) <- rcs
+                                   ]
+decrypt = encrypt

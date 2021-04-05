@@ -1,0 +1,44 @@
+module utils where
+
+import plugboard(Permutation)
+import rotors(Rotor)
+
+/*
+ * Returns the mapped plaintext Char (from ../mono_substitution.cry)
+ *
+ * Input: The Char resulting from the mapping
+ * Output: The original Char
+ */
+invSubst : (String 26, Char) -> Char
+invSubst (substKey, c) = candidates ! 0
+    where
+    candidates = [0] # [if c == k then a else p
+                       | k <- substKey
+                       | a <- ['A' .. 'Z']
+                       | p <- candidates
+                       ]
+
+/*
+ * substFwd returns Char from given permutation.
+ * substBwd returns the original character
+ *
+ * Input: The Permutation and the Char
+ * Output: The permuted Char if substFwd, the original Char if substBwd
+ */
+substFwd, substBwd : (Permutation, Char) -> Char
+substFwd (perm, c) = perm @ (c - 'A')
+substBwd (perm, c) = invSubst (perm, c)
+
+/*
+ * Runs the rotors in reverse after the signal exists the reflector.
+ *
+ * Input: The Rotors and the Char output by the reflector
+ * Output: The Char after having passed through the rotors backwards
+ */
+backSignal : {n} (fin n) => ([n]Rotor, Char) -> Char
+backSignal (rotors, inChar) = cs ! 0
+  where
+    cs = [inChar] # [substBwd([p | (p, _) <- r], c)
+                    | r <- reverse rotors
+                    | c <- cs
+                    ]

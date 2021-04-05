@@ -1,0 +1,85 @@
+module AES where
+/*
+ * This module puts all the parts together and implements encryption/decryption
+ * (This version of AES is different from the standard in some ways I can't even figure out,
+ * the version that adheres to the standard precisely is in the file FIPS197_AES.cry)
+ */
+
+import keyexpansion
+import polynomials
+import mixcolumns
+import shiftrows
+import subbytes
+import params
+
+/*
+ * Implement the AES rounds and their inverses.
+ *
+ * Input: The Round Key and the current/old state
+ * Output: The new state
+ */
+AESRound, AESFinalRound, AESInvRound, AESInvFinalRound : RoundKey -> State -> State
+
+AESRound rk s = addRoundKey rk (mixColumns (shiftRows (subBytes s)))
+
+AESInvRound rk s = invMixColumns (addRoundKey rk (invSubBytes (invShiftRows s)))
+
+/* the final round doesn't have the MixColumns step */
+AESFinalRound rk s = addRoundKey rk (shiftRows (subBytes s))
+
+AESInvFinalRound rk s = addRoundKey rk (invSubBytes (invShiftRows s))
+
+/*
+ * Turns blocks of 128 bits into the AES state representing them.
+ *
+ * Input: The 128 bit message
+ * Output: The state corresponding to it
+ */
+msgToState : [128] -> State
+msgToState m = transpose (split (split m))
+
+/*
+ * Turns the AES state into a 128 bit message.
+ *
+ * Input: The AES 4x4 state matrix
+ * Output: The corresponding 128 bit message
+ */
+stateToMsg : State -> [128]
+stateToMsg s = join (join (transpose s))
+
+/*
+ * Implements the actual AES encryption/decryption.
+ *
+ * Input: The plaintext/ciphertex and the key
+ * Output: The ciphertext/plaintext
+ */
+aesEncrypt, aesDecrypt : [128] -> [AESKeySize] -> [128]
+
+aesEncrypt pt key = stateToMsg (AESFinalRound kfin (rounds ! 0))
+  where
+    (kinit, ks, kfin) = expandKey key
+    s0 = addRoundKey kinit (msgToState pt)
+    rounds = [s0] # [AESRound rk s
+                    | rk <- ks
+                    | s  <- rounds
+                    ]
+
+aesDecrypt ct key = stateToMsg (AESInvFinalRound kfin (rounds ! 0))
+  where
+    (kfin, ks, kinit) = expandKey key
+    s0 = addRoundKey kinit (msgToState ct)
+    rounds = [s0] # [AESInvRound rk s
+                    | rk <- reverse ks
+                    | s  <- rounds
+                    ]
+
+
+msgToStateToMsg : [128] -> Bit
+property msgToStateToMsg m = stateToMsg (msgToState m) == m
+
+stateToMsgToState : State -> Bit
+property stateToMsgToState s = msgToState (stateToMsg s) == s
+
+AESCorrect : [128] -> [AESKeySize] -> Bit
+property AESCorrect pt key = aesDecrypt (aesEncrypt pt key) key == pt
+

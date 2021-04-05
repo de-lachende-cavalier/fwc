@@ -1,0 +1,67 @@
+module mixcolumns where
+/*
+ * Module to implement the MixColumns step.
+ */
+
+import params(GF28, State)
+import polynomials
+
+/*
+ * Computes the dot product of two vectors in GF(2^^8).
+ *
+ * Input: Two vectors with components in GF(2^^8)
+ * Output: The scalar in GF(2^^8) resulting from the dot product
+ */
+GF28_DotProd : {n} (fin n) => [n]GF28 -> [n]GF28 -> GF28
+GF28_DotProd v w = GF28_Add [GF28_Mul p r | p <- v | r <- w]
+
+/*
+ * Computes the dot product of a vector with a matrix, in GF(2^^8).
+ *
+ * Input: A vector and an n*m matrix, in GF(2^^8)
+ * Output: A vector with each component represented by the dot product of the initial vector with the row of the matrix, in GF(2^^8)
+ */
+GF28_VecMul : {n, m} (fin n, fin m) => [n]GF28 -> [m][n]GF28 -> [m]GF28
+GF28_VecMul v m = [GF28_DotProd v row | row <- m]
+
+/*
+ * Multiplies two matrices in GF(2^^8).
+ *
+ * Input: An n*m matrix and an m*k matrix, in GF(2^^8)
+ * Output: The resulting n*k matrix, in GF(2^^8)
+ */
+GF28_MatMul : {n, m, k} (fin n, fin m, fin k) => [n][m]GF28 -> [m][k]GF28 -> [n][k]GF28
+GF28_MatMul m t = [GF28_VecMul v t' | v <- m]
+  where
+    t' = transpose t
+
+/*
+ * Implements the MixColumns step and its inverse.
+ *
+ * Input: The current/old state
+ * Output: The new state
+ */
+mixColumns, invMixColumns : State -> State
+
+mixColumns state = GF28_MatMul M state
+  where // m is given by the spec (circulant MDS matrix)
+    M = [[0x02, 0x03, 0x01, 0x01],
+         [0x01, 0x02, 0x03, 0x01],
+         [0x01, 0x01, 0x02, 0x03],
+         [0x03, 0x01, 0x01, 0x02]]
+
+invMixColumns state = GF28_MatMul M state
+  where
+    M = [[0x0e, 0x0b, 0x0d, 0x09],
+         [0x09, 0x0e, 0x0b, 0x0d],
+         [0x0d, 0x09, 0x0e, 0x0b],
+         [0x0b, 0x0d, 0x09, 0x0e]]
+
+
+/* verifies that the dot product is commutative */
+dotProdCommut : {n} (fin n) => [n]GF28 -> [n]GF28 -> Bit
+property dotProdCommut v w = GF28_DotProd v w == GF28_DotProd w v
+
+mixInv : State -> Bit
+property mixInv state = invMixColumns (mixColumns state) == state
+

@@ -1,0 +1,58 @@
+module rotors where
+/*
+ * Rotors allow for rotating permutations.
+ * Notches allow rotors to rotate, we will allow as many notches as we want.
+ */
+import plugboard(Permutation)
+
+// the notch will be controlled by the Bit
+type Rotor = [26](Char, Bit)
+
+/*
+ * Creates a rotor.
+ *
+ * Input: Permutation of the rotor and a String of length n indicating the position of the notches
+ * Output: a Rotor with the desired permutation and notch mappings
+ */
+mkRotor : {n} (fin n) => (Permutation, String n) -> Rotor
+mkRotor (perm, notchLocs) = [(p, elem p notchLocs) | p <- perm]
+
+/* rotor1, rotor2, rotor3 : Rotor */
+/* rotor1 = mkRotor ("RJICAWVQZODLUPYFEHXSMTKNGB", "IO") */ /* => the notch will be engaged if I or O appears => the other rotor will rotate once the notch is engaged */
+/* rotor2 = mkRotor ("DWYOLETKNVQPHURZJMSFIGXCBA", "B") */
+/* rotor3 = mkRotor ("FGKMAJWUOVNRYIZETDPSHBLCQX", "CK") */
+
+/*
+ * Implements the scrambling done by the rotors.
+ *
+ * Input: A Bit indicating whether the rotor should rotate after the encryption, a Char to encrypt and the current state of the Rotor
+ * Output: A Bit indicating whether the next rotor should rotate, a Char which results from the encryption with the rotor and the new state of the Rotor
+ */
+scramble : (Bit, Char, Rotor) -> (Bit, Char, Rotor)
+scramble (rotate, c, rotor) = (notch, c', rotor')
+  where
+    (c', _) = rotor @ (c - 'A')
+    (_, notch) = rotor @ 0
+
+    rotor' = if rotate then rotor <<< 1 else rotor
+
+/*
+ * Connects the rotors and makes them function in sequence (as they're supposed to).
+ *
+ * Input: n Rotors and an input Char
+ * Output: The n Rotors in the new state and the output Char
+ */
+joinRotors : {n} (fin n) => ([n]Rotor, Char) -> ([n]Rotor, Char)
+joinRotors (rotors, inChar) = (rotors', outChar)
+  where
+    initRotor = mkRotor (['A' .. 'Z'], [])
+
+    ncrs : [n + 1](Bit, Char, Rotor) /* ncrs == notches-chars-rotors */
+    ncrs = [(True, inChar, initRotor)] # [scramble (notch, char, r)  // fold pattern
+                                          | r <- rotors
+                                          | (notch, char, rotor') <- ncrs
+                                         ]
+
+    rotors' = tail [ r | (_, _, r) <- ncrs]
+    (_, outChar, _) = ncrs ! 0 // output of the final rotor
+

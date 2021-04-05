@@ -1,0 +1,40 @@
+module vigenere where
+/*
+* ATTACKATDAWN -> pt
+* CRYPTOLCRYPT -> cycle key
+* CKRPVYLVUYLG -> ct
+*
+* Vigenere is polyalphabetic, so we can imagine one alphabet for each letter of the plaintext.
+* To encrypt/decrypt we take the difference between the letter of the key and 'A' and shift the plaintext letter by that amount.
+*
+* Check out the 'Algebraic Description' section of https://en.wikipedia.org/wiki/Vigen%C3%A8re_cipher for an even simpler method for Vigenère.
+*/
+
+cycle : {n, a} (fin n, n >= 1) => [n]a -> [inf]a
+cycle xs = xss
+  where xss = xs # xss
+
+/*
+ * A short version of the Caesar encryption function.
+ *
+ * Input: An 8 bit shift value, the String of length n on which to apply the shift and a Bit indicating whether we intend to encrypt (True) or decrypt (False)
+ * Output: The shifted String of length n
+ */
+shift : {n} ([8], String n, Bit) -> String n
+shift (s, msg, e) = [ cmap @ (x - 'A') | x <- msg ]
+  where
+    cmap = if e then ['A' .. 'Z'] <<< s else ['A' .. 'Z'] >>> s
+
+
+eVigenere, dVigenere : {k, m} (fin k, k >= 1) => String k -> String m -> String m
+
+eVigenere key pt = join [shift (k - 'A', [c], True)
+                        | c <- pt
+                        | k <- cycle key
+                        ]
+
+dVigenere key ct = join [shift (k - 'A', [c], False)
+                        | c <- ct
+                        | k <- cycle key
+                        ]
+

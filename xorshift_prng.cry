@@ -1,0 +1,9 @@
+module xorshift where
+
+xorshift64 : [64] -> [64]
+xorshift64 state = z * 0x2545F4914F6CDD1D
+  where
+    z = y ^ (y >> 27)
+    y = x ^ (x << 25)
+    x = state ^ (state >> 12)
+

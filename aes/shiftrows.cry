@@ -1,0 +1,37 @@
+module shiftrows where
+/*
+ * Module that implements the ShiftRows operation.
+ */
+
+import params(State)
+
+/*
+ * Implements the ShiftRows step and its inverse.
+ *
+ * Input: The current/old state
+ * Output: The new state
+ */
+shiftRows, invShiftRows : State -> State
+
+shiftRows state = [row <<< shift
+                  | row <- state
+                  | shift <- [0 .. 3]
+                  ]
+
+invShiftRows state = [row >>> shift
+                     | row <- state
+                     | shift <- [0 .. 3]
+                     ]
+
+
+// => repeating shiftRows 4n times, n > 0, restores the initial state 
+// (check it row by row to see it's correct)
+repeatShiftToInit : State -> Bit
+property repeatShiftToInit state = states @ 4 == state
+  where
+    states = [state] # [shiftRows s | s <- states]
+
+shiftInv : State -> Bit
+property shiftInv state = invShiftRows (shiftRows state) == state
+
+

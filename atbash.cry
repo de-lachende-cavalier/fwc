@@ -1,0 +1,9 @@
+module atbash where
+
+// atbash is self decrypting (aka encryption == decryption)
+edAtbash : {m} String m -> String m
+edAtbash m = [shift x | x <- m]
+  where
+    cmap = reverse ['A' .. 'Z']
+    shift c = cmap @ (c - 'A')
+

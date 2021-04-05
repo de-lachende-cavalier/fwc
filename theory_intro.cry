@@ -1,0 +1,15 @@
+module intro where
+
+// type signature
+increment : Integer -> Integer
+// binding (associated to the above type signature)
+increment x = x + 1
+
+maxSeq : {n, a} (fin n, Cmp a, Literal 0 a) => [n]a -> a 
+maxSeq xs = ys ! 0
+  // this pattern is a 'fold'
+  where ys = [0] # [ max x y | x <- xs | y <- ys ]
+
+/* infinite fibonacci list, to get nth fibonacci number do fibs @ n */
+/* let fibs = [0] # [1] # zipWith (+) fibs (tail fibs) */
+

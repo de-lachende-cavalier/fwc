@@ -1,0 +1,29 @@
+module mono_substitution where
+
+/* for simplicity we'll always use this substitution key */
+/* (allowing for custom substitution keys in the various functions is trivial) */
+substKey : String 26
+substKey = "FJHWOTYRXMKBPIAZEVNULSGDCQ"
+
+/* maps the char in the substKey to a plaintext char */
+/* use a fold */
+invSubst : Char -> Char
+invSubst c = candidates ! 0
+  where
+    candidates = [0] # [if c == k then a else p
+                       | k <- substKey
+                       | a <- ['A' .. 'Z']
+                       | p <- candidates
+                       ]
+
+
+
+/* notice the similarity between Caesar's cipher, Atbash and this (it's no coincidence) */
+eSubst, dSubst : {n} String n -> String n
+
+eSubst pt = [shift x | x <- pt]
+  where
+    shift c = substKey @ (c - 'A')
+
+dSubst ct = [invSubst x | x <- ct]
+

@@ -1,0 +1,23 @@
+module reflector where
+/*
+ * The reflector is simply a static permutation of the alphabet.
+ */
+import plugboard(Permutation)
+
+type Reflector = Permutation
+
+/* reflector : Reflector */
+/* reflector = "FEIPBATSCYVUWZQDOXHGLKMRJN" */
+
+/*
+ * Checks that the given Reflector is in fact symmetric and non-self mapping.
+ *
+ * Input: The Reflector to check
+ * Output: True if the reflector is 'good', False otherwise
+ */
+checkReflector : Reflector -> Bit
+checkReflector reflector = all symmetric reflector && all non_self_map reflector
+  where
+    symmetric x = x == reflector @ (reflector @ (x - 'A') - 'A')
+    non_self_map x = x != reflector @ (x - 'A')
+

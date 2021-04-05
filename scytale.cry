@@ -1,0 +1,12 @@
+module scytale where
+
+eScytale, dScytale : {row, diameter} (fin row, fin diameter) => String (row * diameter) -> String (diameter * row)
+
+eScytale msg = join (transpose msg')
+  where
+    msg' = split msg : [diameter][row][8]
+
+dScytale msg = join (transpose msg')
+  where
+    msg' = split msg : [row][diameter][8]
+
