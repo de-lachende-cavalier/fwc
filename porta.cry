@@ -100,7 +100,7 @@ private
       key = mkKey 1
 
 /*
- * TODO => have to restrict input to only uppercase letters!!
+ * TODO => have to restrict input to only uppercase letters
  */
 numsInRange : {n, m} (fin n, n == 2 * m, fin m, n >= 2, m >= 2) => String n -> Bit
 numsInRange s = all isTrue [if (x >= 0) && (x <= 676) then True else False | x <- (encrypt s)] where isTrue x = x

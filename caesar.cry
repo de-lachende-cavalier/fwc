@@ -24,5 +24,5 @@ private
   crackIt ct = [dCaesar n ct | n <- [1:[8] .. 25]]
 
   /* repeated caesar cipher (as weak as one-time caesar cipher) */
-  rivate repeatC pt = [eCaesar n pt | n <- [4, 7, 13, 11] : [4][8]] ! 0
+  private repeatC pt = [eCaesar n pt | n <- [4, 7, 13, 11] : [4][8]] ! 0
 

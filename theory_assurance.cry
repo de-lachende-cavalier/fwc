@@ -54,6 +54,6 @@ type Quad a = ([a], [a], [a], [a])
 // fermat's last theorem, aka a^^n + b^^n = c^^n has no integer solutions for a,b,c > 0 and n > 2
 modFermat : {s} (fin s , s >= 2) => Quad s -> Bit
 modFermat (a, b, c, n) = a^^n + b^^n == c^^n
-// XXX surprisingly, fermat's last theorem is false in the modular bit arithemtic of Cryptol (!!) (check :sat)
+// XXX surprisingly, fermat's last theorem is false in the modular bit arithemtic of Cryptol (!) (check :sat)
 
 
